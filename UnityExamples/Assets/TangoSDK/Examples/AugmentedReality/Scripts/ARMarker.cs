@@ -42,6 +42,8 @@ public class ARMarker : MonoBehaviour
     /// </summary>
     public float m_timestamp = -1.0f;
 
+	public string m_title;
+
     /// <summary>
     /// The marker's transformation with respect to the device frame.
     /// </summary>

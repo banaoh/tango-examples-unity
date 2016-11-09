@@ -26,6 +26,7 @@ using System.Xml;
 using System.Xml.Serialization;
 using Tango;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
 /// <summary>
@@ -59,6 +60,13 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     /// Saving progress UI text.
     /// </summary>
     public UnityEngine.UI.Text m_savingText;
+
+	public GameObject m_memopanel;
+	public Rect rect_memopanel;
+	public bool flag_add_memo = false;
+	public bool flag_memo_panel = false;
+	public Vector2 touchPosition;
+	public Text memo_title;
 
     /// <summary>
     /// The Area Description currently loaded in the Tango Service.
@@ -139,6 +147,21 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
 
     private Thread m_saveThread;
 
+	public void Awake()
+	{
+//		memo_title = new Text ();
+		m_memopanel = GameObject.Find ("/Canvas/memo_Panel");
+		rect_memopanel = new Rect (m_memopanel.GetComponent<Transform>().position.x,
+			m_memopanel.GetComponent<Transform>().position.y,
+			450,
+			300);
+		memo_title = GameObject.Find("/Canvas/memo_Panel/InputField/memo_title").GetComponent<Text>();
+
+
+		Debug.Log ("test" + m_memopanel.name);
+		m_memopanel.SetActive (false);
+	}
+
     /// <summary>
     /// Unity Start function.
     /// 
@@ -207,6 +230,10 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             }
             else if (Physics.Raycast(cam.ScreenPointToRay(t.position), out hitInfo))
             {
+                // メモがあったら削除などができる部分
+
+                // TODO：メモの詳細、詳細、削除を実装
+
                 // Found a marker, select it (so long as it isn't disappearing)!
                 GameObject tapped = hitInfo.collider.gameObject;
                 if (!tapped.GetComponent<Animation>().isPlaying)
@@ -216,21 +243,81 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             }
             else
             {
-                // Place a new point at that location, clear selection
-                m_selectedMarker = null;
-                StartCoroutine(_WaitForDepthAndFindPlane(t.position));
-                
-                // Because we may wait a small amount of time, this is a good place to play a small
-                // animation so the user knows that their input was received.
-                RectTransform touchEffectRectTransform = Instantiate(m_prefabTouchEffect) as RectTransform;
-                touchEffectRectTransform.transform.SetParent(m_canvas.transform, false);
-                Vector2 normalizedPosition = t.position;
-                normalizedPosition.x /= Screen.width;
-                normalizedPosition.y /= Screen.height;
-                touchEffectRectTransform.anchorMin = touchEffectRectTransform.anchorMax = normalizedPosition;
+                // メモを追加する部分
+
+                // TODO：メモを選択する機能を実装する
+                // TODO：テキスト入力を可能にする
+				/*
+				 * 途中で破棄できるようにするため、『メモ内容はprivateで作ること！！』
+				 * 
+				 * set active
+				 * メモタイプを変更
+				 * キーボード
+				 * 入力完了の処理
+				 * submitの処理
+				 * 途中でやめる処理
+				  
+				*/
+
+//				StartCoroutine (_addItem(t.position));
+
+				// メモ追加画面が表示されている時
+				if(m_memopanel.activeInHierarchy){
+					m_memopanel.SetActive (false);
+				}
+				else{
+					m_memopanel.SetActive (true);
+					touchPosition = t.position;
+				}
             }
         }
     }
+
+
+	//  メモを追加するメソッド
+	/*
+	 * メモを追加する手順を理解する
+	 * 
+	 * 追加する場所をタップ
+	 * パネルの表示
+	 * while 登録ボタンをタップ or それ以外の領域をタップ or xボタンをタップ
+	 * 
+	 * メモの追加処理
+	 * 
+	 * end
+	 * 
+	 * パネルを非表示
+	 */
+
+	public void CloseItemPanel(){
+		flag_memo_panel = true;
+		GameObject.Find("Canvas/memo_Panel/InputField/memo_title").GetComponent<Text>().text = "";
+		m_memopanel.SetActive (false);
+	}
+
+	public void AddMemo()
+	{
+		Debug.Log ("added memo start");
+		// Place a new point at that location, clear selection
+		m_selectedMarker = null;
+		StartCoroutine(_WaitForDepthAndFindPlane(touchPosition));
+		// Because we may wait a small amount of time, this is a good place to play a small
+		// animation so the user knows that their input was received.
+		RectTransform touchEffectRectTransform = Instantiate(m_prefabTouchEffect) as RectTransform;
+		touchEffectRectTransform.transform.SetParent(m_canvas.transform, false);
+		Vector2 normalizedPosition = touchPosition;
+		normalizedPosition.x /= Screen.width;
+		normalizedPosition.y /= Screen.height;
+		touchEffectRectTransform.anchorMin = touchEffectRectTransform.anchorMax = normalizedPosition;
+		m_memopanel.SetActive (false);
+		Debug.Log ("added memo end");
+	}
+
+	public bool tapAddButton()
+	{
+		flag_memo_panel = true;
+		return flag_memo_panel;
+	}
 
     /// <summary>
     /// Application onPause / onResume callback.
@@ -653,6 +740,10 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         newMarkObject = Instantiate(m_markPrefabs[m_currentMarkType],
                                     planeCenter,
                                     Quaternion.LookRotation(forward, up)) as GameObject;
+		GameObject title = newMarkObject.transform.FindChild ("title").gameObject;
+		Debug.Log (memo_title.text);
+		title.GetComponent<TextMesh> ().text = memo_title.text;
+		
 
         ARMarker markerScript = newMarkObject.GetComponent<ARMarker>();
 
@@ -700,5 +791,8 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         /// </summary>
         [XmlElement("orientation")]
         public Quaternion m_orientation;
+
+		[XmlElement("text")]
+		public string m_title;
     }
 }
