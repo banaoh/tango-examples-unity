@@ -561,6 +561,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
 #if UNITY_EDITOR
                     metadata.m_name = m_guiTextInputContents;
 #else
+					Debug.Log(kb.text);
                     metadata.m_name = kb.text;
 #endif
                     m_curAreaDescription.SaveMetadata(metadata);

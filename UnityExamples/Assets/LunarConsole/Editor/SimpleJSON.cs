@@ -417,7 +417,7 @@ namespace LunarConsolePluginInternal
         }
         public string SaveToCompressedBase64()
         {
-            using (var stream = new System.IO.MemoStream())
+            using (var stream = new System.IO.MemoryStream())
             {
                 SaveToCompressedStream(stream);
                 stream.Position = 0;
@@ -534,7 +534,7 @@ namespace LunarConsolePluginInternal
         public static JSONNode LoadFromCompressedBase64(string aBase64)
         {
             var tmp = System.Convert.FromBase64String(aBase64);
-            var stream = new System.IO.MemoStream(tmp);
+            var stream = new System.IO.MemoryStream(tmp);
             stream.Position = 0;
             return LoadFromCompressedStream(stream);
         }
