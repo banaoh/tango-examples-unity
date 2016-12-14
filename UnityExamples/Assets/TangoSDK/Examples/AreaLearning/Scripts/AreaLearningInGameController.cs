@@ -157,8 +157,6 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
 			300);
 		memo_title = GameObject.Find("/Canvas/memo_Panel/InputField/memo_title").GetComponent<Text>();
 
-
-		Debug.Log ("test" + m_memopanel.name);
 		m_memopanel.SetActive (false);
 	}
 
@@ -629,6 +627,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             MarkerData temp = new MarkerData();
             temp.m_type = obj.GetComponent<ARMarker>().m_type;
             temp.m_position = obj.transform.position;
+			Debug.Log ("save text : " + obj.GetComponent<ARMarker> ().m_title);
 			temp.m_title = obj.GetComponent<ARMarker> ().m_title;
             temp.m_orientation = obj.transform.rotation;
             xmlDataList.Add(temp);
@@ -669,8 +668,13 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
                                           mark.m_position,
                                           mark.m_orientation
 										  ) as GameObject;
+			Debug.Log ("marker_type：" + mark.m_type);
+			Debug.Log ("marker_title：" + mark.m_title);
 			temp.transform.FindChild ("title").gameObject.GetComponent<TextMesh> ().text = mark.m_title;
+			temp.GetComponent<ARMarker> ().m_title = mark.m_title;
 //			FindChild ("title").gameObject.title.GetComponent<TextMesh> ().text = mark.m_title;
+			Debug.Log("temp_type：" + temp.GetComponent<ARMarker>().m_type);
+			Debug.Log("temp_title：" + temp.GetComponent<ARMarker>().m_title);
             m_markerList.Add(temp);
         }
     }
@@ -754,6 +758,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
 
         markerScript.m_type = m_currentMarkType;
         markerScript.m_timestamp = (float)m_poseController.m_poseTimestamp;
+		markerScript.m_title = memo_title.text;
         
         Matrix4x4 uwTDevice = Matrix4x4.TRS(m_poseController.m_tangoPosition,
                                             m_poseController.m_tangoRotation,
