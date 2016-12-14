@@ -629,6 +629,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             MarkerData temp = new MarkerData();
             temp.m_type = obj.GetComponent<ARMarker>().m_type;
             temp.m_position = obj.transform.position;
+			temp.m_title = obj.GetComponent<ARMarker> ().m_title;
             temp.m_orientation = obj.transform.rotation;
             xmlDataList.Add(temp);
         }
@@ -666,7 +667,10 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             // Instantiate all markers' gameobject.
             GameObject temp = Instantiate(m_markPrefabs[mark.m_type],
                                           mark.m_position,
-                                          mark.m_orientation) as GameObject;
+                                          mark.m_orientation
+										  ) as GameObject;
+			temp.transform.FindChild ("title").gameObject.GetComponent<TextMesh> ().text = mark.m_title;
+//			FindChild ("title").gameObject.title.GetComponent<TextMesh> ().text = mark.m_title;
             m_markerList.Add(temp);
         }
     }
@@ -744,7 +748,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
 		GameObject title = newMarkObject.transform.FindChild ("title").gameObject;
 		Debug.Log (memo_title.text);
 		title.GetComponent<TextMesh> ().text = memo_title.text;
-		
+
 
         ARMarker markerScript = newMarkObject.GetComponent<ARMarker>();
 

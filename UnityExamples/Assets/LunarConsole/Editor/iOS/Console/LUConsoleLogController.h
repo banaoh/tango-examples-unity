@@ -26,26 +26,18 @@
 @class LUConsolePlugin;
 @class LUConsoleLogController;
 
-@protocol LUConsoleLogControllerDelegate <NSObject>
+@protocol LUConsoleLogControllerResizeDelegate <NSObject>
 
-@optional
-- (void)consoleControllerDidOpen:(LUConsoleLogController *)controller;
-- (void)consoleControllerDidClose:(LUConsoleLogController *)controller;
+- (void)consoleLogControllerDidRequestResize:(LUConsoleLogController *)controller;
 
 @end
 
 @interface LUConsoleLogController : LUViewController
 
-@property (nonatomic, retain) NSString *version;
-@property (nonatomic, assign) id<LUConsoleLogControllerDelegate> delegate;
+@property (nonatomic, strong) NSString *version;
+@property (nonatomic, weak) id<LUConsoleLogControllerResizeDelegate> resizeDelegate;
 
-+ (instancetype)controllerWithPlugin:(LUConsolePlugin *)console;
-- (instancetype)initWithPlugin:(LUConsolePlugin *)console;
-
-@end
-
-@interface LUConsoleLogControllerState : NSObject
-
-+ (instancetype)sharedControllerState;
++ (instancetype)controllerWithPlugin:(LUConsolePlugin *)plugin;
+- (instancetype)initWithPlugin:(LUConsolePlugin *)plugin;
 
 @end

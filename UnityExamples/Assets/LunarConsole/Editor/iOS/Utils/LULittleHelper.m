@@ -31,7 +31,6 @@ void LUDisplayAlertView(NSString *title, NSString *message)
                                               cancelButtonTitle:@"OK"
                                               otherButtonTitles:nil];
     [alertView show];
-    LU_RELEASE(alertView);
 }
 
 CGRect LUGetScreenBounds()
@@ -55,6 +54,11 @@ CGRect LUGetScreenBounds()
 UIInterfaceOrientation LUGetInterfaceOrientation()
 {
     return [UIApplication sharedApplication].statusBarOrientation;
+}
+
+BOOL LUIsPortraitInterfaceOrientation(void)
+{
+    return UIInterfaceOrientationIsPortrait(LUGetInterfaceOrientation());
 }
 
 BOOL LUIsLandscapeInterfaceOrientation()

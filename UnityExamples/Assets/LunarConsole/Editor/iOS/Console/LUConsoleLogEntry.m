@@ -28,6 +28,7 @@ static NSArray * _cellSkinLookup;
 @interface LUConsoleLogEntry ()
 
 @property (nonatomic, assign) CGFloat cachedHeight;
+@property (nonatomic, assign) CGFloat cachedWidth;
 
 @end
 
@@ -58,7 +59,7 @@ static NSArray * _cellSkinLookup;
 
 + (instancetype)entryWithType:(LUConsoleLogType)type message:(NSString *)message stackTrace:(NSString *)stackTrace
 {
-    return LU_AUTORELEASE([[[self class] alloc] initWithType:type message:message stackTrace:stackTrace]);
+    return [[[self class] alloc] initWithType:type message:message stackTrace:stackTrace];
 }
 
 - (instancetype)initWithType:(LUConsoleLogType)type message:(NSString *)message stackTrace:(NSString *)stackTrace
@@ -67,19 +68,12 @@ static NSArray * _cellSkinLookup;
     if (self)
     {
         _type = type;
-        _message = LU_RETAIN(message);
-        _stackTrace = LU_RETAIN(stackTrace);
-        _cachedHeight = -1;
+        _message = message;
+        _stackTrace = stackTrace;
     }
     return self;
 }
 
-- (void)dealloc
-{
-    LU_RELEASE(_message);
-    LU_RELEASE(_stackTrace);
-    LU_SUPER_DEALLOC
-}
 
 #pragma mark -
 #pragma mark Equality
@@ -126,8 +120,9 @@ static NSArray * _cellSkinLookup;
 - (CGSize)cellSizeForTableView:(UITableView *)tableView
 {
     CGFloat cellWidth = CGRectGetWidth(tableView.bounds);
-    if (_cachedHeight < 0.0f)
+    if (!LUFloatApprox(_cachedWidth, cellWidth))
     {
+        _cachedWidth = cellWidth;
         _cachedHeight = [LUConsoleLogEntryTableViewCell heightForCellWithText:_message width:cellWidth];
     }
     
@@ -167,7 +162,7 @@ static NSArray * _cellSkinLookup;
 
 + (instancetype)entryWithEntry:(LUConsoleLogEntry *)entry
 {
-    return LU_AUTORELEASE([[self alloc] initWithEntry:entry]);
+    return [[self alloc] initWithEntry:entry];
 }
 
 - (instancetype)initWithEntry:(LUConsoleLogEntry *)entry
@@ -222,7 +217,7 @@ static NSArray * _cellSkinLookup;
 
 + (instancetype)entryWithEntry:(LUConsoleLogEntry *)entry
 {
-    return LU_AUTORELEASE([[self alloc] initWithEntry:entry]);
+    return [[self alloc] initWithEntry:entry];
 }
 
 - (instancetype)initWithEntry:(LUConsoleLogEntry *)entry
@@ -261,8 +256,9 @@ static NSArray * _cellSkinLookup;
 - (CGSize)cellSizeForTableView:(UITableView *)tableView
 {
     CGFloat cellWidth = CGRectGetWidth(tableView.bounds);
-    if (self.cachedHeight < 0.0f)
+    if (!LUFloatApprox(self.cachedWidth, cellWidth))
     {
+        self.cachedWidth = cellWidth;
         self.cachedHeight = [LUConsoleOverlayLogEntryTableViewCell heightForCellWithText:self.message width:cellWidth];
     }
     

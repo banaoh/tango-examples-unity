@@ -33,6 +33,16 @@
 
 @end
 
+@interface LUButtonSkin : NSObject
+
++ (instancetype)buttonSkin;
+
+@property (nonatomic, readonly) UIImage *normalImage;
+@property (nonatomic, readonly) UIImage *selectedImage;
+@property (nonatomic, readonly) UIFont  *font;
+
+@end
+
 @interface LUTheme : NSObject
 
 @property (nonatomic, readonly) UIColor *tableColor;
@@ -60,9 +70,21 @@
 @property (nonatomic, readonly) CGFloat buttonWidth;
 @property (nonatomic, readonly) CGFloat buttonHeight;
 
+@property (nonatomic, readonly) LUButtonSkin *actionButtonLargeSkin;
+
 @property (nonatomic, readonly) UIImage *collapseBackgroundImage;
 @property (nonatomic, readonly) UIColor *collapseBackgroundColor;
 @property (nonatomic, readonly) UIColor *collapseTextColor;
+
+@property (nonatomic, readonly) UIFont  *actionsWarningFont;
+@property (nonatomic, readonly) UIColor *actionsWarningTextColor;
+@property (nonatomic, readonly) UIFont  *actionsFont;
+@property (nonatomic, readonly) UIColor *actionsTextColor;
+@property (nonatomic, readonly) UIColor *actionsBackgroundColorLight;
+@property (nonatomic, readonly) UIColor *actionsBackgroundColorDark;
+@property (nonatomic, readonly) UIFont  *actionsGroupFont;
+@property (nonatomic, readonly) UIColor *actionsGroupTextColor;
+@property (nonatomic, readonly) UIColor *actionsGroupBackgroundColor;
 
 @property (nonatomic, readonly) UIFont  *contextMenuFont;
 @property (nonatomic, readonly) UIColor *contextMenuBackgroundColor;
@@ -70,6 +92,8 @@
 @property (nonatomic, readonly) UIColor *contextMenuTextHighlightColor;
 
 @property (nonatomic, readonly) UIColor *switchTintColor;
+
+@property (nonatomic, readonly) UIImage *settingsIconImage;
 
 + (LUTheme *)mainTheme;
 

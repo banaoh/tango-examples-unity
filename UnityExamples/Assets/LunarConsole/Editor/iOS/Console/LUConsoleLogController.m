@@ -25,38 +25,35 @@
 
 #import "Lunar.h"
 
-static LUConsoleLogControllerState * _sharedControllerState;
+static const CGFloat kMinWidthToResizeSearchBar = 480;
 
 @interface LUConsoleLogController () <LunarConsoleDelegate, LUToggleButtonDelegate,
     UITableViewDataSource, UITableViewDelegate,
     UISearchBarDelegate,
     MFMailComposeViewControllerDelegate,
     LUTableViewTouchDelegate,
-    LUConsoleLogDetailsControllerDelegate,
     LUConsoleLogMenuControllerDelegate,
-    LUConsoleSettingsControllerDelegate>
+    LUConsolePopupControllerDelegate>
 {
     LU_WEAK LUConsolePlugin * _plugin;
 }
 
-@property (nonatomic, readonly) LUConsole * console;
+@property (weak, nonatomic, readonly) LUConsole * console;
 
-@property (nonatomic, assign) IBOutlet UILabel * statusBarView;
-@property (nonatomic, assign) IBOutlet UILabel * overflowWarningLabel;
+@property (nonatomic, weak) IBOutlet UILabel * statusBarView;
+@property (nonatomic, weak) IBOutlet UILabel * overflowWarningLabel;
 
-@property (nonatomic, assign) IBOutlet LUTableView * tableView;
-@property (nonatomic, assign) IBOutlet UISearchBar * filterBar;
+@property (nonatomic, weak) IBOutlet LUTableView * tableView;
+@property (nonatomic, weak) IBOutlet UISearchBar * filterBar;
 
-@property (nonatomic, assign) IBOutlet LUConsoleLogTypeButton * logButton;
-@property (nonatomic, assign) IBOutlet LUConsoleLogTypeButton * warningButton;
-@property (nonatomic, assign) IBOutlet LUConsoleLogTypeButton * errorButton;
+@property (nonatomic, weak) IBOutlet LUConsoleLogTypeButton * logButton;
+@property (nonatomic, weak) IBOutlet LUConsoleLogTypeButton * warningButton;
+@property (nonatomic, weak) IBOutlet LUConsoleLogTypeButton * errorButton;
 
-@property (nonatomic, assign) IBOutlet LUToggleButton * toggleCollapseButton;
-@property (nonatomic, assign) IBOutlet LUToggleButton * scrollLockButton;
+@property (nonatomic, weak) IBOutlet LUToggleButton * scrollLockButton;
 
-@property (nonatomic, assign) IBOutlet NSLayoutConstraint * lastToolbarButtonTrailingConstraint;
-@property (nonatomic, assign) IBOutlet NSLayoutConstraint * lastToolbarButtonTrailingConstraintCompact;
-@property (nonatomic, assign) IBOutlet NSLayoutConstraint * overflowLabelHeightConstraint;
+@property (nonatomic, weak) IBOutlet NSLayoutConstraint * lastToolbarButtonTrailingConstraintCompact;
+@property (nonatomic, weak) IBOutlet NSLayoutConstraint * overflowLabelHeightConstraint;
 
 @property (nonatomic, assign) BOOL scrollLocked;
 
@@ -64,24 +61,9 @@ static LUConsoleLogControllerState * _sharedControllerState;
 
 @implementation LUConsoleLogController
 
-+ (void)load
-{
-    if (!LU_IOS_MIN_VERSION_AVAILABLE)
-    {
-        return;
-    }
-    
-    if ([self class] == [LUConsoleLogController class])
-    {
-        // force linker to add these classes for Interface Builder
-        [LUTableView class];
-        [LUConsoleLogTypeButton class];
-    }
-}
-
 + (instancetype)controllerWithPlugin:(LUConsolePlugin *)plugin
 {
-    return LU_AUTORELEASE([[[self class] alloc] initWithPlugin:plugin]);
+    return [[[self class] alloc] initWithPlugin:plugin];
 }
 
 - (instancetype)initWithPlugin:(LUConsolePlugin *)plugin
@@ -89,13 +71,16 @@ static LUConsoleLogControllerState * _sharedControllerState;
     self = [super initWithNibName:NSStringFromClass([self class]) bundle:nil];
     if (self)
     {
-        _plugin = plugin; // no retain here
+        _plugin = plugin; // weak variable: no retain here
+        [self registerNotifications];
     }
     return self;
 }
 
 - (void)dealloc
 {
+    [self unregisterNotifications];
+    
     if (self.console.delegate == self)
     {
         self.console.delegate = nil;
@@ -105,10 +90,7 @@ static LUConsoleLogControllerState * _sharedControllerState;
     _filterBar.delegate     = nil;
     _logButton.delegate     = nil;
     _warningButton.delegate = nil;
-    _errorButton.delegate   = nil;
-    
-    LU_RELEASE(_version)
-    LU_SUPER_DEALLOC
+    _errorButton.delegate   = nil;    
 }
 
 - (void)viewDidLoad
@@ -116,10 +98,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
     [super viewDidLoad];
     
     self.console.delegate = self;
-    
-    // collapse/expand button
-    _toggleCollapseButton.on = self.console.isCollapsed;
-    _toggleCollapseButton.delegate = self;
     
     // scroll lock
     _scrollLocked = YES; // scroll is locked by default
@@ -143,7 +121,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
     UITapGestureRecognizer *statusBarTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
                                                                                                     action:@selector(onStatusBarTap:)];
     [_statusBarView addGestureRecognizer:statusBarTapGestureRecognizer];
-    LU_RELEASE(statusBarTapGestureRecognizer);
     
     _statusBarView.text = [NSString stringWithFormat:@"Lunar Console v%@", _version ? _version : @"?.?.?"];
     
@@ -173,12 +150,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
         {
             [self scrollToBottomAnimated:NO];
         }
-        
-        // notify delegate
-        if ([_delegate respondsToSelector:@selector(consoleControllerDidOpen:)])
-        {
-            [_delegate consoleControllerDidOpen:self];
-        }
     });
 }
 
@@ -199,6 +170,27 @@ static LUConsoleLogControllerState * _sharedControllerState;
     [super didReceiveMemoryWarning];
     
     // TODO: clean up cells
+}
+
+#pragma mark -
+#pragma mark Notifications
+
+- (void)registerNotifications
+{
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(consoleControllerDidResizeNotification:)
+                                                 name:LUConsoleControllerDidResizeNotification
+                                               object:nil];
+}
+
+- (void)unregisterNotifications
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)consoleControllerDidResizeNotification:(NSNotification *)notification
+{
+    [_tableView reloadRowsAtIndexPaths:_tableView.indexPathsForVisibleRows withRowAnimation:UITableViewRowAnimationNone];
 }
 
 #pragma mark -
@@ -234,14 +226,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
 #pragma mark -
 #pragma mark Actions
 
-- (IBAction)onClose:(id)sender
-{
-    if ([_delegate respondsToSelector:@selector(consoleControllerDidClose:)])
-    {
-        [_delegate consoleControllerDidClose:self];
-    }
-}
-
 - (IBAction)onClear:(id)sender
 {
     // clear entries
@@ -276,16 +260,15 @@ static LUConsoleLogControllerState * _sharedControllerState;
     {
         [self presentViewController:controller animated:YES completion:nil];
     }
-    LU_RELEASE(controller);
 }
 
 - (IBAction)onSettings:(id)sender
 {
     LUConsoleSettingsController *controller = [[LUConsoleSettingsController alloc] initWithSettings:_plugin.settings];
-    controller.delegate = self;
-    // add as child view controller
-    [self addChildOverlayController:controller animated:YES];
-    LU_RELEASE(controller);
+    LUConsolePopupController *popupController = [[LUConsolePopupController alloc] initWithContentController:controller];
+    popupController.popupDelegate = self;
+    
+    [popupController presentFromController:self.parentViewController animated:YES];
 }
 
 - (IBAction)onStatusBarTap:(UITapGestureRecognizer *)recognizer
@@ -308,12 +291,14 @@ static LUConsoleLogControllerState * _sharedControllerState;
         [controller addButtonTitle:@"Collapse" target:self action:@selector(onCollapseButton:)];
     }
     
+    // resize button
+    [controller addButtonTitle:@"Move/Resize" target:self action:@selector(onResizeButton:)];
+    
     [controller setDelegate:self];
     
     // add as child view controller
     [self addChildOverlayController:controller animated:NO];
     
-    LU_RELEASE(controller);
 }
 
 #pragma mark -
@@ -390,10 +375,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
     {
         self.scrollLocked = button.isOn;
     }
-    else if (button == _toggleCollapseButton)
-    {
-        [self setCollapsed:button.isOn];
-    }
     else
     {
         LUConsoleLogTypeMask mask = 0;
@@ -459,12 +440,9 @@ static LUConsoleLogControllerState * _sharedControllerState;
     LUConsoleLogEntry *entry = [self entryForRowAtIndexPath:indexPath];
     
     LUConsoleLogDetailsController *controller = [[LUConsoleLogDetailsController alloc] initWithEntry:entry];
-    controller.delegate = self;
-    
-    // add as child view controller
-    [self addChildOverlayController:controller animated:YES];
-    
-    LU_RELEASE(controller);
+    LUConsolePopupController *popupController = [[LUConsolePopupController alloc] initWithContentController:controller];
+    popupController.popupDelegate = self;
+    [popupController presentFromController:self.parentViewController animated:YES];
     
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
 }
@@ -498,9 +476,9 @@ static LUConsoleLogControllerState * _sharedControllerState;
 {
     [searchBar setShowsCancelButton:YES animated:YES];
     
-    if (self.traitCollection.horizontalSizeClass == UIUserInterfaceSizeClassCompact)
+    if (CGRectGetWidth(self.view.bounds) < kMinWidthToResizeSearchBar)
     {
-        NSLayoutConstraint *constraint = [self lastToolbarButtonConstraint];
+        NSLayoutConstraint *constraint = self.lastToolbarButtonTrailingConstraintCompact;
         CGFloat offset = CGRectGetWidth(self.view.bounds) - CGRectGetWidth(self.filterBar.bounds);
         constraint.constant = -offset;
         
@@ -516,9 +494,9 @@ static LUConsoleLogControllerState * _sharedControllerState;
 {
     [searchBar setShowsCancelButton:NO animated:YES];
     
-    if (self.traitCollection.horizontalSizeClass == UIUserInterfaceSizeClassCompact)
+    if (CGRectGetWidth(self.view.bounds) < kMinWidthToResizeSearchBar)
     {
-        NSLayoutConstraint *constraint = [self lastToolbarButtonConstraint];
+        NSLayoutConstraint *constraint = self.lastToolbarButtonTrailingConstraintCompact;
         constraint.constant = 0;
         
         [UIView animateWithDuration:0.4 animations:^{
@@ -552,12 +530,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
     [searchBar resignFirstResponder];
 }
 
-- (NSLayoutConstraint *)lastToolbarButtonConstraint
-{
-    return self.lastToolbarButtonTrailingConstraintCompact != nil ?
-    self.lastToolbarButtonTrailingConstraintCompact : self.lastToolbarButtonTrailingConstraint;
-}
-
 #pragma mark -
 #pragma mark MFMailComposeViewControllerDelegate
 
@@ -584,14 +556,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
 }
 
 #pragma mark -
-#pragma mark LUConsoleLogDetailsControllerDelegate
-
-- (void)detailsControllerDidClose:(LUConsoleLogDetailsController *)controller
-{
-    [self removeChildOverlayController:controller animated:YES];
-}
-
-#pragma mark -
 #pragma mark LUConsoleLogMenuControllerDelegate
 
 - (void)menuControllerDidRequestClose:(LUConsoleLogMenuController *)controller
@@ -600,21 +564,11 @@ static LUConsoleLogControllerState * _sharedControllerState;
 }
 
 #pragma mark -
-#pragma mark LUConsoleSettingsControllerDelegate
+#pragma mark LUConsolePopupControllerDelegate
 
-- (void)consoleSettingsControllerDidClose:(LUConsoleSettingsController *)controller
+- (void)popupControllerDidDismiss:(LUConsolePopupController *)controller
 {
-    NSArray *entries = controller.changedEntries;
-    if (entries.count > 0)
-    {
-        for (LUConsoleSettingsEntry *entry in entries)
-        {
-            [_plugin.settings setValue:entry.value forKey:entry.name];
-        }
-        [_plugin.settings save];
-    }
-    
-    [self removeChildOverlayController:controller animated:YES];
+    [controller dismissAnimated:YES];
 }
 
 #pragma mark -
@@ -636,6 +590,14 @@ static LUConsoleLogControllerState * _sharedControllerState;
 - (void)onExpandButton:(id)sender
 {
     [self setCollapsed:NO];
+}
+
+- (void)onResizeButton:(id)sender
+{
+    if ([_resizeDelegate respondsToSelector:@selector(consoleLogControllerDidRequestResize:)])
+    {
+        [_resizeDelegate consoleLogControllerDidRequestResize:self];
+    }
 }
 
 #pragma mark -
@@ -686,7 +648,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
     {
         NSArray *deleteIndices = [[NSArray alloc] initWithObjects:[NSIndexPath indexPathForRow:0 inSection:0], nil];
         [_tableView deleteRowsAtIndexPaths:deleteIndices withRowAnimation:UITableViewRowAnimationNone];
-        LU_RELEASE(deleteIndices);
     }
     else if (count > 1)
     {
@@ -696,7 +657,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
             [deleteIndices addObject:[NSIndexPath indexPathForRow:rowIndex inSection:0]];
         }
         [_tableView deleteRowsAtIndexPaths:deleteIndices withRowAnimation:UITableViewRowAnimationNone];
-        LU_RELEASE(deleteIndices);
     }
 }
 
@@ -706,7 +666,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
     
     NSArray *indices = [[NSArray alloc] initWithObjects:[NSIndexPath indexPathForRow:index inSection:0], nil];
     [_tableView insertRowsAtIndexPaths:indices withRowAnimation:UITableViewRowAnimationNone];
-    LU_RELEASE(indices);
     
     // scroll to the end
     if (_scrollLocked)
@@ -721,7 +680,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
     
     NSArray *indices = [[NSArray alloc] initWithObjects:[NSIndexPath indexPathForRow:index inSection:0], nil];
     [_tableView reloadRowsAtIndexPaths:indices withRowAnimation:UITableViewRowAnimationNone];
-    LU_RELEASE(indices);
 }
 
 - (void)updateEntriesCount
@@ -761,11 +719,16 @@ static LUConsoleLogControllerState * _sharedControllerState;
 
 - (void)addChildOverlayController:(UIViewController *)controller animated:(BOOL)animated
 {
+    [self parentController:self addChildOverlayController:controller animated:animated];
+}
+
+- (void)parentController:(UIViewController *)parentController addChildOverlayController:(UIViewController *)controller animated:(BOOL)animated
+{
     // add as child view controller
-    [self addChildViewController:controller];
-    controller.view.frame = self.view.bounds;
-    [self.view addSubview:controller.view];
-    [controller didMoveToParentViewController:self];
+    [parentController addChildViewController:controller];
+    controller.view.frame = parentController.view.bounds;
+    [parentController.view addSubview:controller.view];
+    [controller didMoveToParentViewController:parentController];
     
     // animate
     if (animated) {
@@ -783,7 +746,7 @@ static LUConsoleLogControllerState * _sharedControllerState;
         [UIView animateWithDuration:0.4 animations:^{
             controller.view.alpha = 0;
         } completion:^(BOOL finished) {
-            [controller willMoveToParentViewController:self];
+            [controller willMoveToParentViewController:nil];
             [controller.view removeFromSuperview];
             [controller removeFromParentViewController];
         }];
@@ -807,35 +770,6 @@ static LUConsoleLogControllerState * _sharedControllerState;
 - (LUTheme *)theme
 {
     return [LUTheme mainTheme];
-}
-
-- (LUConsoleLogControllerState *)controllerState
-{
-    return [LUConsoleLogControllerState sharedControllerState];
-}
-
-@end
-
-@implementation LUConsoleLogControllerState
-
-- (instancetype)init
-{
-    self = [super init];
-    if (self)
-    {
-        // TODO: init state variables
-    }
-    return self;
-}
-
-+ (instancetype)sharedControllerState
-{
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        _sharedControllerState = [[self alloc] init];
-    });
-    
-    return _sharedControllerState;
 }
 
 @end

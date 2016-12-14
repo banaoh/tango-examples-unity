@@ -19,7 +19,7 @@
 //  limitations under the License.
 //
 
-#define LUNAR_CONSOLE_DISABLED
+#define LUNAR_CONSOLE_ENABLED
 
 #if UNITY_IOS || UNITY_IPHONE || UNITY_ANDROID
 #define LUNAR_CONSOLE_PLATFORM_SUPPORTED

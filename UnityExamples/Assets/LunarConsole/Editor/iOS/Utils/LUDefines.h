@@ -19,21 +19,25 @@
 //  limitations under the License.
 //
 
+#if !defined(LU_INLINE)
+# if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#  define LU_INLINE static inline
+# elif defined(__cplusplus)
+#  define LU_INLINE static inline
+# elif defined(__GNUC__)
+#  define LU_INLINE static __inline__
+# else
+#  define LU_INLINE static
+# endif
+#endif
+
 #define LU_SHOULD_IMPLEMENT_METHOD \
     NSLog(@"%@ should implement %@ method", NSStringFromClass([self class]), NSStringFromSelector(_cmd));
 
 #if __has_feature(objc_arc)
     #define LU_WEAK __weak
-    #define LU_RETAIN(obj) (obj)
-    #define LU_RELEASE(obj)
-    #define LU_AUTORELEASE(obj) (obj)
-    #define LU_SUPER_DEALLOC
 #else
     #define LU_WEAK
-    #define LU_RETAIN(obj) [(obj) retain]
-    #define LU_RELEASE(obj) [(obj) release]
-    #define LU_AUTORELEASE(obj) [(obj) autorelease]
-    #define LU_SUPER_DEALLOC [super dealloc];
 #endif
 
 #if LUNAR_CONSOLE_DEVELOPMENT

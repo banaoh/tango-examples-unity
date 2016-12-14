@@ -38,47 +38,24 @@ static NSDictionary * _propertyTypeLookup;
     LUConsolePluginSettings * _settings;
 }
 
-@property (nonatomic, assign) IBOutlet UIView * contentView;
-@property (nonatomic, assign) IBOutlet UIView * bottomBarView;
-@property (nonatomic, assign) IBOutlet UILabel * titleLabel;
-@property (nonatomic, assign) IBOutlet UITableView * tableView;
+@property (nonatomic, weak) IBOutlet UITableView * tableView;
 
 @end
 
 @implementation LUConsoleSettingsController
-
-+ (void)load
-{
-    if (!LU_IOS_MIN_VERSION_AVAILABLE)
-    {
-        return;
-    }
-    
-    if ([self class] == [LUConsoleSettingsController class])
-    {
-        // force linker to add these classes for Interface Builder
-        [LUSwitch class];
-    }
-}
 
 - (instancetype)initWithSettings:(LUConsolePluginSettings *)settings
 {
     self = [super initWithNibName:NSStringFromClass([self class]) bundle:nil];
     if (self)
     {
-        _settings = LU_RETAIN(settings);
-        _entries = LU_RETAIN([LUConsoleSettingsEntry listSettingsEntries:settings]);
+        _settings = settings;
+        _entries = [LUConsoleSettingsEntry listSettingsEntries:settings];
         
     }
     return self;
 }
 
-- (void)dealloc
-{
-    LU_RELEASE(_entries);
-    LU_RELEASE(_settings);
-    LU_SUPER_DEALLOC
-}
 
 #pragma mark -
 #pragma mark View
@@ -87,19 +64,12 @@ static NSDictionary * _propertyTypeLookup;
 {
     [super viewDidLoad];
     
-    // colors
-    self.view.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.5];
-    
     LUTheme *theme = [LUTheme mainTheme];
-    
-    _contentView.backgroundColor =
-    _bottomBarView.backgroundColor =
     _tableView.backgroundColor = theme.tableColor;
+    _tableView.rowHeight = 43;
     
-    _contentView.layer.borderColor = [[UIColor colorWithRed:0.37 green:0.37 blue:0.37 alpha:1.0] CGColor];
-    _contentView.layer.borderWidth = 2;
-    
-    _titleLabel.textColor = theme.cellLog.textColor;
+    self.popupTitle = @"Settings";
+    self.popupIcon = theme.settingsIconImage;
 }
 
 #pragma mark -
@@ -144,23 +114,22 @@ static NSDictionary * _propertyTypeLookup;
 }
 
 #pragma mark -
-#pragma mark Actions
-
-- (IBAction)onClose:(id)sender
-{
-    if ([_delegate respondsToSelector:@selector(consoleSettingsControllerDidClose:)])
-    {
-        [_delegate consoleSettingsControllerDidClose:self];
-    }
-}
-
-#pragma mark -
-#pragma mark
+#pragma mark Controls
 
 - (void)onToggleBoolean:(LUSwitch *)swtch
 {
     LUConsoleSettingsEntry *entry = swtch.userData;
     entry.value = swtch.isOn ? @YES : @NO;
+    [self settingEntryDidChange:entry];
+}
+
+#pragma mark -
+#pragma mark Entries
+
+- (void)settingEntryDidChange:(LUConsoleSettingsEntry *)entry
+{
+    [_settings setValue:entry.value forKey:entry.name];
+    [_settings save];
 }
 
 #pragma mark -
@@ -198,29 +167,19 @@ static NSDictionary * _propertyTypeLookup;
             value == nil ||
             type == nil)
         {
-            LU_RELEASE(self);
             self = nil;
             return nil;
         }
         
-        _name = LU_RETAIN(name);
-        _title = LU_RETAIN(title);
-        _value = LU_RETAIN(value);
-        _initialValue = LU_RETAIN(value);
-        _type = LU_RETAIN(type);
+        _name = name;
+        _title = title;
+        _value = value;
+        _initialValue = value;
+        _type = type;
     }
     return self;
 }
 
-- (void)dealloc
-{
-    LU_RELEASE(_name);
-    LU_RELEASE(_title);
-    LU_RELEASE(_value);
-    LU_RELEASE(_initialValue);
-    LU_RELEASE(_type);
-    LU_SUPER_DEALLOC
-}
 
 #pragma mark -
 #pragma mark Introspection
@@ -284,7 +243,6 @@ static NSDictionary * _propertyTypeLookup;
             }
             
             [entries addObject:entry];
-            LU_RELEASE(entry);
         }
     }
     free(properties);

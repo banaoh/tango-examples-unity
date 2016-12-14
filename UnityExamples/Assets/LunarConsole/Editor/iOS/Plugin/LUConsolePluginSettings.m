@@ -19,19 +19,14 @@
 //  limitations under the License.
 //
 
-#import <objc/runtime.h>
-
 #import "Lunar.h"
 
 #import "LUConsolePluginSettings.h"
 
-static const NSUInteger kPluginSettingsVersion = 1;
+static NSString * const kKeyEnableExceptionWarning      = @"enableExceptionWarning";
+static NSString * const kKeyEnableTransparentLogOverlay = @"enableTransparentLogOverlay";
 
-@interface LUConsolePluginSettings () <NSCoding>
-{
-    NSString   * _filepath;
-    NSUInteger   _version;
-}
+@interface LUConsolePluginSettings ()
 
 // IMPORTANT: don't create any other properties here
 
@@ -39,92 +34,36 @@ static const NSUInteger kPluginSettingsVersion = 1;
 
 @implementation LUConsolePluginSettings
 
-- (instancetype)initWithFilepath:(NSString *)filepath
-{
-    self = [super init];
-    if (self)
-    {
-        if (filepath == nil)
-        {
-            LU_RELEASE(self);
-            self = nil;
-            return nil;
-        }
-        
-        _filepath = LU_RETAIN(filepath);
-        [self initDefaults];
-    }
-    return self;
-}
+#pragma mark -
+#pragma mark Loading
 
-- (void)dealloc
++ (void)initialize
 {
-    LU_RELEASE(_filepath);
-    LU_SUPER_DEALLOC
+    if ([self class] == [LUConsolePluginSettings class])
+    {
+        [self setVersion:1];
+    }
 }
 
 #pragma mark -
-#pragma mark NSCoding
-
-- (nullable instancetype)initWithCoder:(NSCoder *)decoder
-{
-    self = [super init];
-    if (self)
-    {
-        _version = [decoder decodeIntegerForKey:@"version"];
-        _enableExceptionWarning = [decoder decodeBoolForKey:@"enableExceptionWarning"];
-        _enableTransparentLogOverlay = [decoder decodeBoolForKey:@"enableTransparentLogOverlay"];
-    }
-    return self;
-}
-
-- (void)encodeWithCoder:(NSCoder *)coder
-{
-    [coder encodeInteger:_version forKey:@"version"];
-    [coder encodeBool:_enableExceptionWarning forKey:@"enableExceptionWarning"];
-    [coder encodeBool:_enableTransparentLogOverlay forKey:@"enableTransparentLogOverlay"];
-}
-
-#pragma mark -
-#pragma mark Defaults
+#pragma mark Inheritance
 
 - (void)initDefaults
 {
-    _version = kPluginSettingsVersion;
     _enableExceptionWarning = YES;
     _enableTransparentLogOverlay = NO;
 }
 
-#pragma mark -
-#pragma mark Save/Load
-
-+ (instancetype)settingsWithContentsOfFile:(NSString *)path
+- (void)serializeWithCoder:(NSCoder *)coder
 {
-    LUConsolePluginSettings *settings = [NSKeyedUnarchiver unarchiveObjectWithFile:path];
-    if (settings != nil)
-    {
-        [settings setFilepath:path];
-        return settings;
-    }
-    
-    return LU_AUTORELEASE([[[self class] alloc] initWithFilepath:path]);
+    [coder encodeBool:_enableExceptionWarning forKey:kKeyEnableExceptionWarning];
+    [coder encodeBool:_enableTransparentLogOverlay forKey:kKeyEnableTransparentLogOverlay];
 }
 
-- (BOOL)save
+- (void)deserializeWithDecoder:(NSCoder *)decoder
 {
-    return [NSKeyedArchiver archiveRootObject:self toFile:_filepath];
-}
-
-#pragma mark -
-#pragma mark Path
-
-- (void)setFilepath:(NSString *)filepath
-{
-    if (_filepath != filepath)
-    {
-        LU_RELEASE(_filepath);
-        _filepath = LU_RETAIN(filepath);
-    }
+    _enableExceptionWarning = [decoder decodeBoolForKey:kKeyEnableExceptionWarning];
+    _enableTransparentLogOverlay = [decoder decodeBoolForKey:kKeyEnableTransparentLogOverlay];
 }
 
 @end

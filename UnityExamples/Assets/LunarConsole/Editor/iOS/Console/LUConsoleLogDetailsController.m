@@ -30,13 +30,7 @@
     LUConsoleLogEntry * _entry;
 }
 
-@property (nonatomic, assign) IBOutlet NSLayoutConstraint * contentWidthConstraint;
-@property (nonatomic, assign) IBOutlet NSLayoutConstraint * contentHeightConstraint;
-@property (nonatomic, assign) IBOutlet UIView             * contentView;
-@property (nonatomic, assign) IBOutlet UIView             * bottomBarView;
-@property (nonatomic, assign) IBOutlet UIImageView        * iconView;
-@property (nonatomic, assign) IBOutlet UILabel            * messageView;
-@property (nonatomic, assign) IBOutlet UITextView         * stackTraceView;
+@property (nonatomic, weak) IBOutlet UITextView * stackTraceView;
 
 @end
 
@@ -47,40 +41,22 @@
     self = [super initWithNibName:NSStringFromClass([self class]) bundle:nil];
     if (self)
     {
-        _entry = LU_RETAIN(entry);
+        _entry = entry;
+        
+        self.popupIcon = _entry.icon;
+        self.popupTitle = _entry.message;
+        self.popupButtons = @[
+            [LUConsolePopupButton buttonWithIcon:LUGetImage(@"lunar_console_icon_button_clipboard") target:self action:@selector(onCopyToClipboard:)]
+        ];
     }
     return self;
-}
-
-- (void)dealloc
-{
-    LU_RELEASE(_entry);
-    LU_SUPER_DEALLOC
 }
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     
-    // size
-    CGSize screenSize = LUGetScreenBounds().size;
-    _contentWidthConstraint.constant = screenSize.width - 20;
-    _contentHeightConstraint.constant = 2 * screenSize.height / 3;
-    
-    // colors
-    self.view.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.5];
-    
     LUTheme *theme = [LUTheme mainTheme];
-    
-    _iconView.image = _entry.icon;
-    
-    _contentView.backgroundColor = theme.cellLog.backgroundColorLight;
-    _contentView.layer.borderColor = [[UIColor colorWithRed:0.37 green:0.37 blue:0.37 alpha:1.0] CGColor];
-    _contentView.layer.borderWidth = 2;
-    
-    _messageView.text = _entry.message;
-    _messageView.font = theme.font;
-    _messageView.textColor = theme.cellLog.textColor;
     
     NSString *stackTrace = [_entry hasStackTrace] ?
         [LUStacktrace optimizeStacktrace:_entry.stackTrace] : NO_STACK_TRACE_WARNING;
@@ -88,17 +64,17 @@
     _stackTraceView.text = stackTrace;
     _stackTraceView.font = theme.fontSmall;
     _stackTraceView.textColor = theme.cellLog.textColor;
-    
-    _bottomBarView.backgroundColor = theme.tableColor;
+    _stackTraceView.backgroundColor = theme.tableColor;
+    self.view.backgroundColor = theme.tableColor;
     
     // update layout
     [self.view layoutIfNeeded];
 }
 
 #pragma mark -
-#pragma mark Actions
+#pragma mark Copy to clipboard
 
-- (IBAction)onCopy:(id)sender
+- (void)onCopyToClipboard:(id)sender
 {
     UIPasteboard *pastboard = [UIPasteboard generalPasteboard];
     
@@ -108,14 +84,6 @@
         text = [text stringByAppendingFormat:@"\n\n%@", _entry.stackTrace];
     }
     [pastboard setString:text];
-}
-
-- (IBAction)onClose:(id)sender
-{
-    if ([_delegate respondsToSelector:@selector(detailsControllerDidClose:)])
-    {
-        [_delegate detailsControllerDidClose:self];
-    }
 }
 
 @end
